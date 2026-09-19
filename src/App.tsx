@@ -1,126 +1,62 @@
 import "./styles.css";
+import { componentStatus } from "./domain/rules";
+import { useTrialState } from "./store/useTrialStore";
+import { BatchSidebar } from "./ui/BatchSidebar";
+import { ComponentPanel } from "./ui/ComponentPanel";
+import { TrialBench } from "./ui/TrialBench";
+import { RelationView } from "./ui/RelationView";
+import { RecordsPanel } from "./ui/RecordsPanel";
 
 const project = {
-  "sourceNo": 8,
-  "id": "hxyfront-62013",
-  "port": 62013,
-  "title": "木结构榫卯构件测绘",
-  "domain": "古建木结构",
-  "prompt": "开发一个古建筑木结构榫卯构件测绘前端项目，测绘人员可以录入建筑名称、构件编号、木材种类、榫卯类型、截面尺寸、病害位置、变形情况和修缮建议。页面需要有构件清单、榫卯类型筛选、尺寸记录表、病害标记图和单栋建筑的构件关系视图。",
-  "palette": [
-    "#854d0e",
-    "#475569",
-    "#0f766e"
-  ],
-  "metrics": [
-    "构件数量",
-    "病害点",
-    "榫卯类型",
-    "待修缮"
-  ],
-  "filters": [
-    "燕尾榫",
-    "透榫",
-    "半榫",
-    "箍头榫"
-  ],
-  "fields": [
-    "建筑名称",
-    "构件编号",
-    "木材种类",
-    "榫卯类型",
-    "截面尺寸",
-    "修缮建议"
-  ],
-  "records": [
-    [
-      "梁架A-03",
-      "透榫",
-      "截面180x240mm",
-      "端部开裂"
-    ],
-    [
-      "柱网C-12",
-      "楠木",
-      "柱脚糟朽",
-      "建议局部墩接"
-    ],
-    [
-      "斗拱D-07",
-      "半榫",
-      "轻微变形",
-      "继续监测"
-    ]
-  ]
+  id: "hxyfront-62013",
+  sourceNo: 8,
+  port: 62013,
+  title: "木构榫卯试装放线台",
 };
 
 function App() {
+  const state = useTrialState();
+  const pending = state.components.filter((c) => componentStatus(c) === "pending").length;
+  const repair = state.components.filter((c) => componentStatus(c) === "repair").length;
+  const passedGroups = state.groups.filter((g) => g.status === "passed").length;
+  const metrics = [
+    { label: "构件数量", value: state.components.length },
+    { label: "待检测", value: pending },
+    { label: "送修构件", value: repair },
+    { label: "通过试装组", value: passedGroups },
+  ];
+
   return (
     <main className="app">
       <section className="hero">
         <p>{project.id} · 源提示词{project.sourceNo} · Port {project.port}</p>
         <h1>{project.title}</h1>
-        <span>{project.prompt}</span>
+        <span>
+          试装批按建筑和轴线锁定；构件须先完成病害复核与含水率检测，含水率超 18%
+          或关键截面缺损者只能送修，不得占试装位。一个试装位同时只接纳一组构件，按榫型允许间隙判定，
+          超限退回修配、重新测量后方可复装；试装通过后更换任一构件，整组结论立即失效，旧记录留档并按新件重判；
+          重复试装沿用首次结果。
+        </span>
       </section>
 
       <section className="metrics">
-        {project.metrics.map((metric: string, index: number) => (
-          <article key={metric}>
-            <small>{metric}</small>
-            <strong>{[28, 6, 14, 91][index] ?? 10}</strong>
+        {metrics.map((m) => (
+          <article key={m.label}>
+            <small>{m.label}</small>
+            <strong>{m.value}</strong>
           </article>
         ))}
       </section>
 
-      <section className="workspace">
-        <aside className="panel">
-          <h2>{project.domain}分类</h2>
-          <div className="chips">
-            {project.filters.map((item: string) => (
-              <button key={item}>{item}</button>
-            ))}
-          </div>
-        </aside>
-
-        <section className="panel form-panel">
-          <div className="heading">
-            <div>
-              <p>专业字段</p>
-              <h2>新增记录</h2>
-            </div>
-            <button className="primary">保存记录</button>
-          </div>
-          <div className="field-grid">
-            {project.fields.map((field: string) => (
-              <label key={field}>
-                <span>{field}</span>
-                <input placeholder={"填写" + field} />
-              </label>
-            ))}
-          </div>
-        </section>
-      </section>
-
-      <section className="panel">
-        <div className="heading">
-          <div>
-            <p>近期记录</p>
-            <h2>工作台摘要</h2>
-          </div>
-          <button>导出CSV</button>
+      <div className="workspace">
+        <BatchSidebar />
+        <div className="main-col">
+          <ComponentPanel />
+          <TrialBench />
+          <RelationView />
+          <RecordsPanel />
         </div>
-        <div className="records">
-          {project.records.map((record: string[], index: number) => (
-            <article key={record.join("-")}>
-              <b>{String(index + 1).padStart(2, "0")}</b>
-              <div>
-                <h3>{record[0]}</h3>
-                <p>{record.slice(1).join(" · ")}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      </div>
     </main>
   );
 }
